@@ -1,0 +1,115 @@
+#!/bin/bash
+outfile=$(date +"$HOME/exam-20200923-$no-%s.tar.gz")
+encfile=${outfile}.gpg
+
+# import key
+gpg --list-keys 6A7E4EB180DDD64F >& /dev/null
+if [ ! $? = 0 ]; then
+	echo "== 公開鍵をインポートします =="
+	gpg --import < .key
+fi
+
+cat <<EOM
+============================================================================
+2020年度 前期 期末試験(Linux1) <実技>
+
+問題は3つあります。問題の内容はファイル exam1,exam2,exam3 に入っています。
+各ファイルを読み、対応するファイルを作成してください。
+各問題ごとのファイル名も問題ファイルにて指示されています。
+
+*******
+これより試験環境に入ります
+問題ファイルを読んで作業を行い、指示に沿ったファイルを作ってください。
+exitコマンドを使うと環境から抜け、自動的に提出ファイルを作成します。
+ファイルの修正などを行いたい場合は、再度このスクリプトを実行し、環境から抜けると
+提出ファイルを更新します。
+
+作成された提出ファイルをWindowsなどのホスト環境に転送した上で、
+Classroom上の提出エリアに送信してください。
+
+試験中はディレクトリの移動はおすすめしませんが禁止しません。
+ファイル作成もこのディレクトリ($PWD)にておこなってください。
+もし移動してしまった場合、このディレクトリに戻るためにはリレミトを唱えてください。
+
+$ riremito
+-> 試験ディレクトリに戻ります
+
+また、試験結果を破棄したい場合、メガンテを唱えてください(完全削除です!)
+$ megante
+...
+あなたはやりなおしをすることになった!
+
+*******
+
+============================================================================
+EOM
+
+if [ ! -f /tmp/entry ]; then
+while [ ! "$OK" = "1" ]; do
+		echo "試験前に、出席番号と名前を登録します。"
+		read -p "出席番号> " no
+		read -p "氏名> " name
+		read -p "$no $name ですね? 正しければyを入れてください(y/N): " ok
+		if [ "x$ok" = "xy" ]; then
+			cat > /tmp/entry <<EOM
+no=$no
+name=$name
+EOM
+			echo "保存しました"
+			OK=1
+		fi
+done
+else
+	. /tmp/entry
+	echo "保存済みの氏名登録があるので読み込みました $no,$name"
+fi
+[ -d $no ] && rm -fr $no
+
+echo "試験問題を復号しています"
+COUNT=0
+LIST=`echo data/exam*.gpg`
+for i in $LIST;  do
+  out=$(basename $i .gpg)
+	[ ! -f $out ] && gpg --decrypt --output $(basename $i .gpg) $i  >/dev/null
+	COUNT=$((COUNT+1))
+  echo "問題テキスト $out を取得しました"
+done
+echo "今回は問題は $COUNT 問用意されています"
+
+# 環境切り替え
+bash --rcfile .examrc
+
+# 結果の取得と提出ファイルの生成
+
+echo ">>> 提出ファイルを準備します <<<"
+echo "ファイルチェックをします"
+ls -l no[0-9]*
+
+echo "ファイルをアーカイブしています"
+rm -fr $no; mkdir -p "$no"
+cp -pv no* $no/
+
+if [ -f $outfile ]; then
+	echo "既に出力先ファイルが存在しています、上書き処理します"
+	rm -f $outfile
+fi
+if [ -f $encfile ]; then
+	echo "既に提出用ファイルが存在しています、上書き処理します"
+	rm -f $encfile
+fi
+tar czf $outfile $no
+
+echo "ファイルを暗号化しています"
+cd $HOME
+gpg --encrypt --armor --recipient densuke@st.kobedenshi.ac.jp \
+	--trust-model always --output $encfile \
+	$outfile
+cd -
+rm -fr $no $outfile
+gpg --batch --yes --delete-keys 6A7E4EB180DDD64F
+
+echo "-----------------------------------------------------------------------------"
+echo "まだ終わっていませんよ、Classroomの課題にて、できたファイルを提出してください"
+echo "提出ファイルは、ホームディレクトリ上に $(basename $encfile) という名前で置かれています"
+echo "このファイルをホスト側に転送した上で提出しましょう"
+echo "-----------------------------------------------------------------------------"

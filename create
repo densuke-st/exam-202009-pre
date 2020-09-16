@@ -1,0 +1,15 @@
+#!/bin/bash -e
+
+mkdir -pv data
+cp -v exam* data/
+
+cd data
+for file in $(ls | grep -v .gpg); do
+	gpg --sign --armor --output ${file}.gpg $file
+  rm ${file}
+done
+cd -
+
+rm -v exam*
+rm -fv no*
+chmod +x -v setup create

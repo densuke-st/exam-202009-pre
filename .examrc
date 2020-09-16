@@ -1,0 +1,36 @@
+cat <<EOM
+ここから試験環境です。プロンプトの変化に注目してください。
+試験環境から抜けるには exit コマンドを使用してください。
+何らかの理由で試験中に端末を閉じた場合も、再度setupを実行すれば環境に入れます。
+EOM
+
+C="$PWD"
+
+riremito() {
+  echo "linuxはリレミトを唱えた"
+	cd "$C"
+	echo "->  試験ディレクトリに戻りました"
+	pwd
+}
+
+megante() {
+	cd "$C"
+	echo "linuxはメガンテを唱えた"
+	for i in no{1,2,3}; do
+	if [ -f $i ]; then
+		rm -f $i
+		if [ -f $i ]; then
+			echo "$i は砕け散った!"
+		else
+			echo "$i にメガンテが効かなかった!"
+		fi
+  else
+		echo "$iはいなくなっていた!"
+  fi
+	done
+	echo "あなたはやりなおしをすることになった!"
+}
+
+alias nano="vim"
+
+PS1="[exam] $PS1"
